@@ -1,0 +1,21 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+<title>美区竞品监控</title><p id="status">正在打开看板…</p>
+<script>
+(async () => {
+  const slot = 'dashboard-key:' + location.pathname;
+  try {
+    const token = location.hash.slice(1) || localStorage.getItem(slot);
+    if (!token) throw Error();
+    const bytes = Uint8Array.from(atob(token.replace(/-/g,'+').replace(/_/g,'/')), c=>c.charCodeAt(0));
+    const key = await crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['decrypt']);
+    const response = await fetch('./dashboard.bin', {cache:'no-cache'});
+    if (!response.ok) throw Error();
+    const data = new Uint8Array(await response.arrayBuffer());
+    const plain = await crypto.subtle.decrypt({name:'AES-GCM',iv:data.slice(0,12)},key,data.slice(12));
+    localStorage.setItem(slot,token);
+    history.replaceState(null,'',location.pathname);
+    document.open(); document.write(new TextDecoder().decode(plain)); document.close();
+  } catch { document.getElementById('status').textContent='请使用包含访问密钥的完整分享链接打开看板。'; }
+})();
+</script></html>
